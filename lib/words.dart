@@ -28,3 +28,24 @@ class Word {
     };
   }
 }
+class SurahPage {
+  String? title;
+  int? pageNum;
+  String? surahName;
+  SurahPage({
+    this.title,
+    this.pageNum,
+    this.surahName,
+  });
+
+  // THIS IS IMPORTANT SO U CAN COMPARE TWO PAGES
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is SurahPage && other.pageNum == pageNum;
+  }
+
+  @override
+  int get hashCode => pageNum.hashCode;
+}

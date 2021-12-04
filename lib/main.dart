@@ -1,11 +1,13 @@
+import 'package:collection/collection.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:highlight/database.dart';
-import 'package:highlight/util.dart';
-import 'package:highlight/words.dart';
 import 'package:sqflite/sqflite.dart';
 
+import 'package:highlight/util.dart';
+import 'package:highlight/words.dart';
 
+import 'database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -46,7 +48,6 @@ class _HafsWordDBState extends State<HafsWordDB> {
   late final Database db;
   bool isDatabaseReady = false;
   bool databaseOpenError = false;
-
   @override
   void initState() {
     super.initState();
@@ -57,8 +58,6 @@ class _HafsWordDBState extends State<HafsWordDB> {
   void _openDataBase() async {
     try {
       db = await getDatabase();
-      print('database is ready');
-      print(' path is ==> ${db.path}');
       setState(() {
         isDatabaseReady = true;
       });
@@ -73,7 +72,7 @@ class _HafsWordDBState extends State<HafsWordDB> {
   // });
 
   Future<List<Word>> gettingWords() async {
-    final List<Map<String, dynamic>> maps = await db.query('hafsData');
+    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM hafsData WHERE page IS NOT NULL ORDER BY page ASC');
     return List.generate(maps.length, (i) {
       return Word(
         // These values are page sensitive
@@ -106,7 +105,6 @@ class _HafsWordDBState extends State<HafsWordDB> {
       future: gettingWords(),
       builder: (context, AsyncSnapshot<List<Word>> snapshot) {
         if (!snapshot.hasData) {
-          print('snashot is not here ${snapshot.connectionState}');
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           print('error querying the database ${snapshot.error}');
@@ -120,25 +118,66 @@ class _HafsWordDBState extends State<HafsWordDB> {
   }
 }
 
-class SurahsList extends StatelessWidget {
+class SurahsList extends StatefulWidget {
   final List<Word> words;
   const SurahsList({Key? key, required this.words}) : super(key: key);
 
   @override
+  State<SurahsList> createState() => _SurahsListState();
+}
+
+class _SurahsListState extends State<SurahsList> {
+  // This will return a map where each key correspends to the page number
+  // and the value is a list of words in that page
+  // so the results would be something like this:
+  /*
+    {
+      "Page1": {
+        [word1, word2, word3],
+      },
+       "Page163": {
+        [word1, word2],
+      },
+       "Page503": {
+        [word1, word2, word3, word4],
+      }
+    }
+   */
+  Map<SurahPage, List<Word>> groupPages(List<Word> words) {
+    final pages = <SurahPage, List<Word>>{};
+    pages.addAll(
+      groupBy<Word, SurahPage>(
+        words,
+            (word) => SurahPage(
+          pageNum: word.pageNum,
+          surahName: word.surahName,
+          title: word.title,
+        ),
+      ),
+    );
+    return pages;
+  }
+
+  late final pages = groupPages(widget.words);
+
+  @override
   Widget build(BuildContext context) {
+    final pageNumbers = pages.keys.toList();
     return ListView.builder(
-      itemCount: words.length,
+      itemCount: pageNumbers.length,
       itemBuilder: (context, index) {
-        final word = words[index];
+        final surahPage = pageNumbers[index];
+        final words = pages[surahPage]!;
         return ListTile(
-          title: Text('سورة ' + word.surahName!),
-          subtitle: Text(word.details!),
+          title: Text('سورة ' + surahPage.surahName!),
+          subtitle: Text('صفحة رقم: ${surahPage.pageNum}, عدد الكلمات: ${words.length}'),
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (context) {
                   return ImagePage(
-                    selectedWord: word,
+                    surahPage: surahPage,
+                    words: words,
                   );
                 },
               ),
@@ -151,23 +190,28 @@ class SurahsList extends StatelessWidget {
 }
 
 class ImagePage extends StatelessWidget {
-  final Word selectedWord;
+  final SurahPage surahPage;
+  final List<Word> words;
 
-  const ImagePage({Key? key, required this.selectedWord}) : super(key: key);
+  const ImagePage({Key? key, required this.words, required this.surahPage}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(),
-      body: ImageWidget(selectedWord: selectedWord),
+      body: ImageWidget(
+        words: words,
+        surahPage: surahPage,
+      ),
     );
   }
 }
 
 class ImageWidget extends StatefulWidget {
-  final Word selectedWord;
+  final SurahPage surahPage;
+  final List<Word> words;
 
-  const ImageWidget({Key? key, required this.selectedWord}) : super(key: key);
+  const ImageWidget({Key? key, required this.words, required this.surahPage}) : super(key: key);
 
   @override
   State<ImageWidget> createState() => _ImageWidgetState();
@@ -176,7 +220,7 @@ class ImageWidget extends StatefulWidget {
 class _ImageWidgetState extends State<ImageWidget> {
   bool isReady = false;
   bool imageLoadingError = false;
-  late final String assetName = getAssetPath(widget.selectedWord);
+  late final String assetName = getAssetPath(widget.surahPage.pageNum!);
 
   @override
   void initState() {
@@ -184,51 +228,60 @@ class _ImageWidgetState extends State<ImageWidget> {
     super.initState();
   }
 
-  void loadAssetImage() {}
+  List<Widget> getHighlightWidgets() {
+    final highlightWidgets = <Widget>[];
+    for (var word in widget.words) {
+      final x = word.x;
+      final y = word.y;
+      final w = word.w;
+      final h = word.h;
+      highlightWidgets.add(
+        Positioned(
+          top: y,
+          left: x,
+          child: InkWell(
+            customBorder: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.4),
+                // borderRadius: BorderRadius.circular(20.0),
+              ),
+              height: h,
+              width: w,
+            ),
+            onTap: () {
+              showDialog(
+                context: context,
+                barrierDismissible: true,
+                builder: (context) {
+                  return DialogWidget(selectedWord: word);
+                },
+              );
+            },
+          ),
+        ),
+      );
+    }
+    return highlightWidgets;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final x = widget.selectedWord.x;
-    final y = widget.selectedWord.y;
-    final w = widget.selectedWord.w;
-    final h = widget.selectedWord.h;
     return FittedBox(
       child: SizedBox(
         height: assetImageSize.height,
         width: assetImageSize.width,
         child: Stack(
+          fit: StackFit.passthrough,
           children: [
-            Container(
-              child: Image(
-                height: assetImageSize.height,
-                width: assetImageSize.width,
-                image: AssetImage(assetName),
-              ),
+            Image(
+              height: assetImageSize.height,
+              width: assetImageSize.width,
+              image: AssetImage(assetName),
             ),
-            Positioned(
-              top: y,
-              left: x,
-              child: InkWell(
-                customBorder: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Container(
-                  decoration:
-                  BoxDecoration(color: Colors.red.withOpacity(0.4), borderRadius: BorderRadius.circular(20.0)),
-                  height: h,
-                  width: w,
-                ),
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    barrierDismissible: true,
-                    builder: (context) {
-                      return DialogWidget(selectedWord: widget.selectedWord);
-                    },
-                  );
-                },
-              ),
-            ),
+            ...getHighlightWidgets()
           ],
         ),
       ),
