@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:highlight/database.dart';
 import 'package:highlight/util.dart';
 import 'package:highlight/words.dart';
 import 'package:sqflite/sqflite.dart';
 
-import 'database.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +46,7 @@ class _HafsWordDBState extends State<HafsWordDB> {
   late final Database db;
   bool isDatabaseReady = false;
   bool databaseOpenError = false;
+
   @override
   void initState() {
     super.initState();
@@ -55,13 +57,14 @@ class _HafsWordDBState extends State<HafsWordDB> {
   void _openDataBase() async {
     try {
       db = await getDatabase();
+      print('database is ready');
+      print(' path is ==> ${db.path}');
       setState(() {
-        print('we get the database');
         isDatabaseReady = true;
       });
     } catch (e) {
       databaseOpenError = true;
-      print('There is an error $e');
+      print('error while opening database $e');
     }
   }
 
@@ -93,7 +96,6 @@ class _HafsWordDBState extends State<HafsWordDB> {
   @override
   Widget build(BuildContext context) {
     if (!isDatabaseReady) {
-      print('database is not ready');
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -104,7 +106,7 @@ class _HafsWordDBState extends State<HafsWordDB> {
       future: gettingWords(),
       builder: (context, AsyncSnapshot<List<Word>> snapshot) {
         if (!snapshot.hasData) {
-          print('snapshot has no data');
+          print('snashot is not here ${snapshot.connectionState}');
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           print('error querying the database ${snapshot.error}');
