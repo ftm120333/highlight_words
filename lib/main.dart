@@ -177,12 +177,12 @@ class _SurahsListState extends State<SurahsList> {
           enableInfiniteScroll: false),
       itemCount: quranPages,
       itemBuilder: (context, index, realIndex) {
-        final surahPage = pageNumbers[index];
-        final words = pages[surahPage]!;
         List<int?> markedPages = pageNumbers.map((e) => e.pageNum).toList();
         // print(pageNumbers[index].pageNum == (index + 1));
 
         if (markedPages.contains(index + 1)) {
+          final surahPage = pageNumbers[index];
+          final words = pages[surahPage]!;
           return Container(
             child: buildImage(index + 1, words, true),
           );
