@@ -1,11 +1,10 @@
+import 'package:carousel_slider/carousel_slider.dart';
 import 'package:collection/collection.dart';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:sqflite/sqflite.dart';
-
 import 'package:highlight/util.dart';
 import 'package:highlight/words.dart';
+import 'package:sqflite/sqflite.dart';
 
 import 'database.dart';
 
@@ -72,7 +71,8 @@ class _HafsWordDBState extends State<HafsWordDB> {
   // });
 
   Future<List<Word>> gettingWords() async {
-    final List<Map<String, dynamic>> maps = await db.rawQuery('SELECT * FROM hafsData WHERE page IS NOT NULL ORDER BY page ASC');
+    final List<Map<String, dynamic>> maps = await db.rawQuery(
+        'SELECT * FROM hafsData WHERE page IS NOT NULL ORDER BY page ASC');
     return List.generate(maps.length, (i) {
       return Word(
         // These values are page sensitive
@@ -108,10 +108,13 @@ class _HafsWordDBState extends State<HafsWordDB> {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
           print('error querying the database ${snapshot.error}');
-          return const Center(child: Text('could not query the database wrong'));
+          return const Center(
+              child: Text('could not query the database wrong'));
         } else {
           // this will make all the pages below as RTL
-          return Directionality(textDirection: TextDirection.rtl, child: SurahsList(words: snapshot.data!));
+          return Directionality(
+              textDirection: TextDirection.rtl,
+              child: SurahsList(words: snapshot.data!));
         }
       },
     );
@@ -148,7 +151,7 @@ class _SurahsListState extends State<SurahsList> {
     pages.addAll(
       groupBy<Word, SurahPage>(
         words,
-            (word) => SurahPage(
+        (word) => SurahPage(
           pageNum: word.pageNum,
           surahName: word.surahName,
           title: word.title,
@@ -159,59 +162,83 @@ class _SurahsListState extends State<SurahsList> {
   }
 
   late final pages = groupPages(widget.words);
+  static const int quranPages = 604;
 
   @override
   Widget build(BuildContext context) {
     final pageNumbers = pages.keys.toList();
-    return ListView.builder(
-      itemCount: pageNumbers.length,
-      itemBuilder: (context, index) {
+
+    return CarouselSlider.builder(
+      options: CarouselOptions(
+          height: double.infinity, reverse: false, viewportFraction: 1),
+      itemCount: quranPages,
+      itemBuilder: (context, index, realIndex) {
         final surahPage = pageNumbers[index];
         final words = pages[surahPage]!;
-        return ListTile(
-          title: Text('سورة ' + surahPage.surahName!),
-          subtitle: Text('صفحة رقم: ${surahPage.pageNum}, عدد الكلمات: ${words.length}'),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (context) {
-                  return ImagePage(
-                    surahPage: surahPage,
-                    words: words,
-                  );
-                },
-              ),
-            );
-          },
+        return Container(
+          child: buildImage(index + 1, words),
         );
       },
     );
+
+    // return ListView.builder(
+    //   itemCount: pageNumbers.length,
+    //   itemBuilder: (context, index) {
+    //
+    //     return ListTile(
+    //       title: Text('سورة ' + surahPage.surahName!),
+    //       subtitle: Text(
+    //           'صفحة رقم: ${surahPage.pageNum}, عدد الكلمات: ${words.length}'),
+    //       onTap: () {
+    //         Navigator.of(context).push(
+    //           MaterialPageRoute(
+    //             builder: (context) {
+    //               return ImagePage(
+    //                 surahPage: surahPage,
+    //                 words: words,
+    //               );
+    //             },
+    //           ),
+    //         );
+    //       },
+    //     );
+    //   },
+    // );
+  }
+
+  Widget buildImage(currentPage, words) {
+    return Container(
+        color: Colors.white12, // HexColor('#F7EBB9'),
+
+        child: ImagePage(
+          surahPage: currentPage,
+          words: words,
+        ));
   }
 }
 
 class ImagePage extends StatelessWidget {
-  final SurahPage surahPage;
+  final int surahPage;
   final List<Word> words;
 
-  const ImagePage({Key? key, required this.words, required this.surahPage}) : super(key: key);
+  const ImagePage({Key? key, required this.words, required this.surahPage})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      body: ImageWidget(
-        words: words,
-        surahPage: surahPage,
-      ),
+    return ImageWidget(
+      words: words,
+      surahPage: surahPage,
     );
   }
 }
 
 class ImageWidget extends StatefulWidget {
-  final SurahPage surahPage;
+  final int surahPage;
   final List<Word> words;
 
-  const ImageWidget({Key? key, required this.words, required this.surahPage}) : super(key: key);
+  const ImageWidget({Key? key, required this.words, required this.surahPage})
+      : super(key: key);
 
   @override
   State<ImageWidget> createState() => _ImageWidgetState();
@@ -220,7 +247,7 @@ class ImageWidget extends StatefulWidget {
 class _ImageWidgetState extends State<ImageWidget> {
   bool isReady = false;
   bool imageLoadingError = false;
-  late final String assetName = getAssetPath(widget.surahPage.pageNum!);
+  late final String assetName = getAssetPath(widget.surahPage!);
 
   @override
   void initState() {
@@ -310,7 +337,8 @@ class DialogWidget extends StatelessWidget {
               children: [
                 Text(selectedWord.title!),
                 const Divider(),
-                Text(selectedWord.details!, maxLines: null, overflow: TextOverflow.visible),
+                Text(selectedWord.details!,
+                    maxLines: null, overflow: TextOverflow.visible),
               ],
             ),
           );
