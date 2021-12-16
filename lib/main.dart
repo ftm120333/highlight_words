@@ -173,7 +173,7 @@ class _SurahsListState extends State<SurahsList> {
           height: double.infinity,
           reverse: false,
           viewportFraction: 1,
-          initialPage: 2,
+          initialPage: 0,
           enableInfiniteScroll: false),
       itemCount: quranPages,
       itemBuilder: (context, index, realIndex) {
@@ -181,7 +181,9 @@ class _SurahsListState extends State<SurahsList> {
         // print(pageNumbers[index].pageNum == (index + 1));
 
         if (markedPages.contains(index + 1)) {
-          final surahPage = pageNumbers[index];
+          final surahPage = pageNumbers.firstWhere((e) {
+            return e.pageNum == index + 1;
+          });
           final words = pages[surahPage]!;
           return Container(
             child: buildImage(index + 1, words, true),
