@@ -173,14 +173,24 @@ class _SurahsListState extends State<SurahsList> {
           height: double.infinity,
           reverse: false,
           viewportFraction: 1,
+          initialPage: 2,
           enableInfiniteScroll: false),
       itemCount: quranPages,
       itemBuilder: (context, index, realIndex) {
         final surahPage = pageNumbers[index];
         final words = pages[surahPage]!;
-        return Container(
-          child: buildImage(index + 1, words),
-        );
+        List<int?> markedPages = pageNumbers.map((e) => e.pageNum).toList();
+        // print(pageNumbers[index].pageNum == (index + 1));
+
+        if (markedPages.contains(index + 1)) {
+          return Container(
+            child: buildImage(index + 1, words, true),
+          );
+        } else {
+          return Container(
+            child: buildImage(index + 1, [Word(x: 0, y: 0)], true),
+          );
+        }
       },
     );
 
@@ -209,7 +219,7 @@ class _SurahsListState extends State<SurahsList> {
     // );
   }
 
-  Widget buildImage(currentPage, words) {
+  Widget buildImage(currentPage, words, highlightFlag) {
     return Container(
         color: Colors.white12, // HexColor('#F7EBB9'),
 
