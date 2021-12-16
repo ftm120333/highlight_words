@@ -170,7 +170,10 @@ class _SurahsListState extends State<SurahsList> {
 
     return CarouselSlider.builder(
       options: CarouselOptions(
-          height: double.infinity, reverse: false, viewportFraction: 1),
+          height: double.infinity,
+          reverse: false,
+          viewportFraction: 1,
+          enableInfiniteScroll: false),
       itemCount: quranPages,
       itemBuilder: (context, index, realIndex) {
         final surahPage = pageNumbers[index];
