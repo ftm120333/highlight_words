@@ -17,7 +17,7 @@ late final String databasePath;
 // This was copied from here: https://github.com/tekartik/sqflite/blob/master/sqflite/doc/opening_asset_db.md
 Future<void> setDatabasePath() async {
   var databasesPath = await getDatabasesPath();
-  var hafsDatabase = "tryHafs.db";
+  var hafsDatabase = "hafs_words.db";
   databasePath = join(databasesPath, hafsDatabase);
 
 // Check if the database exists
